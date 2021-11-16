@@ -1,0 +1,49 @@
+import pathlib
+import csv
+import pandas as pd
+
+#A few variables to define to get things going
+project = '00'
+inputDir = [Project directory goes here with .HD files (Sensors and Software)]
+outputDir = inputDir
+outFilename = "LineInfo_GPR_Proj"+project
+
+
+Lines = []
+
+path = pathlib.Path(inputDir)
+print(path)
+files = path.glob('*.HD')
+
+#This code is specific to the Noggin250+
+for f in files:
+    #print(f)
+    with open(f) as HDFile:
+        fileData = csv.reader(HDFile)
+
+        fileLines = []
+        for row in fileData:
+            fileLines.append(row)
+
+        fileLines2 = []
+        for r in enumerate(fileLines):
+            if r[1] == []:
+                pass
+            elif r[0] < 3:
+                pass
+            elif r[0] == 4:
+                fileLines2.append(r[1][0].strip())
+            else:
+                fileLines2.append(r[1][0].split('=')[1].strip())
+        fileLines2.append(f.stem)
+        fileLines2.append(project)
+        Lines.append(fileLines2)
+
+print('Lines is now ' + str(len(Lines)) + ' lines long.\n\n')
+
+cols = ['Date Collected', 'No Traces', 'No Pts/Trace', 'TimeZeroPt', 'TimeWin[ns]', 'StartPos', 'FinalPos', 'Step', 'PosUnits', 'NomFreq', 'AntennaSep', 'PulserVoltage', 'Stacks', 'SurveyMode', 'Odometer Cal [t/m]', 'StackingType', 'NogginSerialNo', 'DVLSerialNo','LineNo', "Project"]
+dataframe = pd.DataFrame(Lines)
+dataframe.columns = cols
+dataframe.to_csv(outputDir+outFilename)
+
+
