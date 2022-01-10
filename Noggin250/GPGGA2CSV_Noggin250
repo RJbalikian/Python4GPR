@@ -1,0 +1,107 @@
+#This script reads in the .gps files collected with the Sensors and Software Noggin+ 250
+#  These gps files contain GPGGA sentences. This file converts those into a .csv file with lat lon that can be read into GIS software, e.g.
+
+#Import packages
+import pandas as pd
+import numpy as np
+import csv
+import datetime
+import pathlib
+
+###Update these######################################################
+#Set up for data import
+#inDir is directory that contains all the .gps files
+#outDir is the directory to output the .csv file with XYZ columns. The script also exports the .csv file into the original input directory
+inDir = '...\\PROJECT2\\'
+outDir = '...\\Output\\'
+#####################################################################
+
+
+AllFiles = pathlib.Path(inDir).glob('*.gps')
+
+#Read in .gps files only, with relevant information only
+allLines = []
+for f in AllFiles:
+    lines = []
+    with open(f) as cf:
+        inData = csv.reader(cf, delimiter=',')
+        for row in inData:
+            if row[0] == '$GPGGA':
+                mdfTime = f.stat().st_mtime
+                mdfTime = datetime.datetime.fromtimestamp(mdfTime) #Get time of file creation from file information itself, add as column
+                row.append(f.stem)
+                row.append(mdfTime)
+                lines.append(row)
+    for l in lines:
+        allLines.append(l)
+
+inDF = pd.DataFrame(allLines)
+
+#Create new dataframe for data manipulation, and format
+df = inDF.copy()
+df.dropna(axis=0, inplace=True, how='any',)
+
+cols = ["StrType", "Time", "Lat_Unformat", "LatDir", "Lon_Unformat", "LonDir", "Quality", "Satellites", "HDOP", "Elev_m", "ElevUnit", "GeoidOffset", "GeoidOffsetUnit", "Col", "STID", "Filename","FileCreateTime"]
+df.columns = cols
+floatCols = ["Time","Lat_Unformat", "Lon_Unformat","Quality","Satellites","HDOP","Elev_m","GeoidOffset"]
+
+for c in floatCols:
+    df[c] = pd.to_numeric(df[c],errors='coerce')#.astype(float,errors='ignore')
+
+df.dropna(axis=0, inplace=True, how='any',)
+df.reset_index(drop=True, inplace=True)
+
+#Add new columns for timing
+df["Time"] = pd.to_datetime(df["Time"],format="%H%M%S")
+df["year"] = df["FileCreateTime"].dt.year
+df["month"] = df["FileCreateTime"].dt.month
+df["day"] = df["FileCreateTime"].dt.day
+df["hour"] = df["Time"].dt.hour
+df["minute"] = df["Time"].dt.minute
+df["second"] = df["Time"].dt.second
+
+df["CollectTime"] = pd.to_datetime(df[['year', 'month', 'day', 'hour', 'minute', 'second']])
+
+#Reformat GGA sentence coordinates to decimal degree
+df["LatDeg"] = (df["Lat_Unformat"]/100).astype(float)
+df["LatDeg"] = np.floor(df["LatDeg"])
+df["LonDeg"] = (df["Lon_Unformat"]/100).astype(float)
+df["LonDeg"] = np.floor(df["LonDeg"])
+
+df["LatMin"] = df["Lat_Unformat"].astype(str)
+df["LatMin"] = df.LatMin.str.extract('(?<=^..)(.*)')
+df["LonMin"] = df["Lon_Unformat"].astype(str)
+df["LonMin"] = (df.LonMin.str.extract('(?<=^..)(.*)'))
+
+df["LatMinDec"] = pd.to_numeric(df["LatMin"])/60
+df["LonMinDec"] = pd.to_numeric(df["LonMin"])/60
+
+df["Latitude"] = df["LatDeg"]+df["LatMinDec"]
+df["Longitude"] = df["LonDeg"]+df["LonMinDec"]
+
+for d in enumerate(df["LatDir"]):
+    if d[1] == 'S':
+        df.loc[d[0],"Latitude"] = df.loc[d[0],"Latitude"] *-1
+
+for d in enumerate(df["LonDir"]):
+    if d[1] == 'W':
+        df.loc[d[0],"Longitude"] = df.loc[d[0],"Longitude"] *-1
+
+#Create dataframe for output
+outDF = pd.DataFrame()
+
+outDF.index.name="ID"
+outDF["Time"] = df["CollectTime"]
+outDF["File"] = df["Filename"]
+outDF["Latitude"] = df["Latitude"]
+outDF["Longitude"] = df["Longitude"]
+outDF["Elev_m"] = df["Elev_m"]
+outDF["Quality"] = df["Quality"]
+outDF["Satellites"] = df["Satellites"]
+outDF["HDOP"] = df["HDOP"]
+outDF["GeoidSep"] = df["GeoidOffset"]
+
+#Check and Export
+print(outDF)
+outDF.to_csv(outDir+'AllGPSPts_GPR.csv')
+outDF.to_csv(inDir+'AllGPSPts_GPR.csv')
