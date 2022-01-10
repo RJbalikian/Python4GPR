@@ -1,0 +1,88 @@
+#This script reads in elevation traces extracted from GIS and maps them out to the prescribed number of GPR traces so they can be read into GPR software
+import pandas as pd
+import random
+import numpy as np
+
+##Update These###############################
+inputDir = "...\\Topo_GPS\\GPRTopo_GPS\\"
+RGPROutDir = inputDir+'forRGPR\\'
+GPRSliceOutDir = inputDir+'forGPRSlice\\'
+##############################################
+
+
+inCols = ['id', 'Label', 'xDist_m', 'Elev_ft', 'Elev_m', 'Easting', 'Northing']
+readCols = ['xDist_m','Easting', 'Northing', 'Elev_m']
+procCols = ['xDist',"x",'y',"z"]
+#GPRSliceCols = ['id', 'x', 'y', 'z']
+RGPRoutCols = ['x', 'y', 'z']
+
+for i in range(0,13):
+    #UPDATE THESE###################################################
+    filename = "Line"+str(i).zfill(2)+"_GPR_Elevs_0.25m.csv" #UPDATE THIS
+    #              0   1    2     3    4       5    6    7    8    9    10   11   12    
+    traceList = [476, 783, 1203, 834, 469, 691, 182, 290, 507, 289, 1380, 1520, 1184]
+    RGPRoutFile = "CV21_Line"+str(i).zfill(2)+"_GPR_Elevs_XYZ.csv" #UPDATE THIS
+    GPRSliceoutFile = "CV21_Line"+str(i)+".csv"     #UPDATE THIS
+    ###############################################################
+
+    noTraces = traceList[i]
+    
+    dataIN = pd.read_csv(inputDir+filename,usecols=readCols)
+    dataIN = dataIN.reindex(columns = readCols)
+    data = dataIN.copy()
+
+    data.columns = procCols
+
+    currLen = data.shape[0]
+    print("Initial No of Pts in Line"+str(i).zfill(2)+": "+str(data.shape[0]) +" out of expected "+str(noTraces))
+   
+    if data.shape[0] > noTraces:
+        print("Too many points, reducing")
+        dropList = []
+        i=0
+        keepGoing = data.shape[0]-len(np.unique(dropList))
+        while keepGoing > noTraces:
+            dropList.append(random.randint(1,data.shape[0]-1))
+            keepGoing = data.shape[0]-np.unique(dropList).shape[0]
+
+
+        res = []
+        for j in dropList: 
+            if j not in res:
+                res.append(j)
+        dropList = res.copy()
+
+        data.drop(dropList, axis=0, inplace=True)
+    
+        
+    elif data.shape[0] < noTraces:
+        print("Too few points, inserting")
+        pts2Add = noTraces-data.shape[0]
+        addList = np.linspace(0,max(data['xDist']), num=pts2Add+2)
+        addList = np.delete(addList, [0, len(addList)-1])
+        newDF = pd.DataFrame()
+        for a in addList:
+            if a>10:
+                j = np.ceil(a)-10
+            else:
+                j = 0
+            xD = data.loc[j,'xDist']
+            while a-xD > 0:
+                j = j+1
+                xD = data.loc[j,'xDist']
+            newXDist = (data.loc[j,'xDist']+data.loc[j+1,'xDist'])/2
+            newEast = (data.loc[j,'x']+data.loc[j+1,'x'])/2
+            newNorth = (data.loc[j,'y']+data.loc[j+1,'y'])/2
+            newElev = round((data.loc[j,'z']+data.loc[j+1,'z'])/2,2)
+            newline = pd.DataFrame([[a,newXDist,newEast,newNorth, newElev]])
+            newDF = newDF.append(newline)
+    else:
+        pass
+    data = data.append(newDF)
+    print("Output Length: "+str(data.shape[0]))
+
+    data.reset_index(inplace=True,drop=True)
+    data.to_csv(GPRSliceOutDir+RGPRoutFile, index_label='ID')
+    data.to_csv(RGPROutDir+GPRSliceoutFile, index=False)
+
+    print(GPRSliceoutFile+" Processed.")
