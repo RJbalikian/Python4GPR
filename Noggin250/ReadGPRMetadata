@@ -5,11 +5,11 @@
 ###############################
 #inDir is the directory where all the GPR header files (.HD) are located. This data is combined and output into a single .csv file
 #outputDir is where you want the info file to export
-inDir = '\\\\isgs-sinkhole\\geophysics\\GPR\\2021_Allerton\\Allerton21_Sandbox\\PROJECT2\\'
+inDir = '...\\PROJECT2\\'
 outputDir = inDir
 
-projectNo = '02'
-projectName = "Allerton21"
+projectNo = '00'
+projectName = "PROJECTNAME"
 ################################
 ########Down to here############
 ################################
@@ -51,6 +51,6 @@ print('Lines is now ' + str(len(Lines)) + ' lines long.\n\n')
 cols = ['Date Collected', 'No Traces', 'No Pts/Trace', 'TimeZeroPt', 'TimeWin[ns]', 'StartPos', 'FinalPos', 'Step', 'PosUnits', 'NomFreq', 'AntennaSep', 'PulserVoltage', 'Stacks', 'SurveyMode', 'Odometer Cal [t/m]', 'StackingType', 'NogginSerialNo', 'DVLSerialNo','LineNo', "Project"]
 dataframe = pd.DataFrame(Lines)
 dataframe.columns = cols
-dataframe.to_csv(outputDir+"LineInfo_GPR_CherryValley.csv")
+dataframe.to_csv(outputDir+"LineInfo_GPR.csv")
 
 
