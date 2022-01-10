@@ -1,23 +1,30 @@
+#This script reads in the metadata for data collected with the Sensors and Software Noggin 250 and combines it into a single file for easier reference during processing
+
+###############################
+##Update this information######
+###############################
+#inDir is the directory where all the GPR header files (.HD) are located. This data is combined and output into a single .csv file
+#outputDir is where you want the info file to export
+inDir = '\\\\isgs-sinkhole\\geophysics\\GPR\\2021_Allerton\\Allerton21_Sandbox\\PROJECT2\\'
+outputDir = inDir
+
+projectNo = '02'
+projectName = "Allerton21"
+################################
+########Down to here############
+################################
+
+#The rest of this can run unchanged
 import pathlib
 import csv
 import pandas as pd
 
-#A few variables to define to get things going
-project = '00'
-inputDir = [Project directory goes here with .HD files (Sensors and Software)]
-outputDir = inputDir
-outFilename = "LineInfo_GPR_Proj"+project
-
-
 Lines = []
 
-path = pathlib.Path(inputDir)
+path = pathlib.Path(inDir)
 print(path)
 files = path.glob('*.HD')
-
-#This code is specific to the Noggin250+
 for f in files:
-    #print(f)
     with open(f) as HDFile:
         fileData = csv.reader(HDFile)
 
@@ -36,7 +43,7 @@ for f in files:
             else:
                 fileLines2.append(r[1][0].split('=')[1].strip())
         fileLines2.append(f.stem)
-        fileLines2.append(project)
+        fileLines2.append(projectNo)
         Lines.append(fileLines2)
 
 print('Lines is now ' + str(len(Lines)) + ' lines long.\n\n')
@@ -44,6 +51,6 @@ print('Lines is now ' + str(len(Lines)) + ' lines long.\n\n')
 cols = ['Date Collected', 'No Traces', 'No Pts/Trace', 'TimeZeroPt', 'TimeWin[ns]', 'StartPos', 'FinalPos', 'Step', 'PosUnits', 'NomFreq', 'AntennaSep', 'PulserVoltage', 'Stacks', 'SurveyMode', 'Odometer Cal [t/m]', 'StackingType', 'NogginSerialNo', 'DVLSerialNo','LineNo', "Project"]
 dataframe = pd.DataFrame(Lines)
 dataframe.columns = cols
-dataframe.to_csv(outputDir+outFilename)
+dataframe.to_csv(outputDir+"LineInfo_GPR_CherryValley.csv")
 
 
